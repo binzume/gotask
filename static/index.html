@@ -1,0 +1,68 @@
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+	<!-- link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon" / -->
+	<meta name="theme-color" content="#0099ff">
+	<link rel="stylesheet" type="text/css" href="css/task.css" />
+	<link rel="stylesheet" type="text/css" href="css/form.css" />
+	<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+	<title>TaskRunner</title>
+	<script src="graph.js"></script>
+	<script src="tasks.js"></script>
+</head>
+
+<body>
+	<header>
+		<ul class="menubar">
+			<li id="menu-button" class="clickable">≡</li>
+			<li><a href="./">TaskRunner</a></li>
+			<li id="option-menu-button" style="float:right" class="clickable">...</li>
+		</ul>
+		<ul id="option-menu" class='popup' style="right:4pt">
+			<li><a href="./readme.html">Readme</a></li>
+			<li style="_display:none"><a href="/logout">Logout</a></li>
+		</ul>
+	</header>
+
+	<div id="content">
+
+	<div id="menu-pane">
+		<h2>Tasks</h2>
+
+
+		<ul class="simple" id="task-list">
+			<li>dummy title 01</li>
+		</ul>
+	</div>
+
+	<div id="main-pane">
+		<div id="main-pane-header">
+			<h2 id="task-title">task0</h2>
+			<button id="item-sort-button" class="material-icons" style="display:none">sort</button>
+			<button id="task-refresh-button" class="material-icons" title="refresh">refresh</button>
+			<button id="task-start-button" class="material-icons" title="start">play_arrow</button>
+		</div>
+		<ul id="sort-order-list" class='popup' style="right:10pt">
+			<li><button class="clickable" data-sort-order="updated,d">Updated, desc</button></li>
+			<li><button class="clickable" data-sort-order="updated,a">Updated, asc</button></li>
+			<li><button class="clickable" data-sort-order="name,d">Name, desc</button></li>
+			<li><button class="clickable" data-sort-order="name,a">Name, asc</button></li>
+			<li><button class="clickable" data-sort-order="size,d">Size</button></li>
+		</ul>
+
+		<svg id="task-graph" width="600" height="100" viewBox="0 0 800 100"></svg>
+
+		<div id="task-info"></div>
+		<pre id="task-log" class="console"></pre>
+
+		<ul class="simple" id="task-history"></ul>
+
+		<div id="item-list-loading" style="display:none">Loading...</div>
+		<div id="error" style="display:none">error.</div>
+	</div>
+
+	</div>
+
+</body>
+</html>
