@@ -1,7 +1,9 @@
 package main
 
 import (
+	"embed"
 	"encoding/json"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"os"
@@ -11,6 +13,9 @@ import (
 
 var manager = NewManager(nil)
 var runner = NewRunner(nil)
+
+//go:embed static/*
+var staticFS embed.FS
 
 func responseJson(w http.ResponseWriter, res interface{}) {
 	json, err := json.Marshal(res)
@@ -81,7 +86,13 @@ func main() {
 	}
 	host := os.Getenv("GOTASK_HTTP_HOST")
 
-	http.Handle("/", http.FileServer(http.Dir("static")))
+	staticDir := os.Getenv("GOTASK_HTTP_STATIC_DIR")
+	if staticDir != "" {
+		http.Handle("/", http.FileServer(http.Dir(staticDir)))
+	} else {
+		static, _ := fs.Sub(staticFS, "static")
+		http.Handle("/", http.FileServer(http.FS(static)))
+	}
 	http.Handle("/tasks/", http.StripPrefix("/tasks/", http.HandlerFunc(handler)))
 	http.Handle("/tasklogs/", http.StripPrefix("/tasklogs/", http.FileServer(http.Dir(runner.LogDir()))))
 	http.ListenAndServe(host+":"+port, nil)
