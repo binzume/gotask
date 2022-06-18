@@ -7,9 +7,8 @@
 	<link rel="stylesheet" type="text/css" href="css/task.css" />
 	<link rel="stylesheet" type="text/css" href="css/form.css" />
 	<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-	<title>TaskRunner</title>
-	<script src="graph.js"></script>
-	<script src="tasks.js"></script>
+	<title>Schedule - TaskRunner</title>
+	<script src="schedule.js"></script>
 </head>
 
 <body>
@@ -17,8 +16,8 @@
 		<ul class="menubar">
 			<li id="menu-button" class="clickable">≡</li>
 			<li><a href="./">TaskRunner</a></li>
-			<li class="selected">Tasks</li>
-			<li><a href="./schedule.html">Schedules</a></li>
+			<li><a href="./">Tasks</a></li>
+			<li class="selected">Schedules</li>
 			<li id="option-menu-button" style="float:right" class="clickable">...</li>
 		</ul>
 		<ul id="option-menu" class='popup' style="right:4pt">
@@ -29,16 +28,12 @@
 
 	<div id="content">
 
-	<div id="menu-pane">
-		<ul class="simple" id="task-list"></ul>
-	</div>
-
 	<div id="main-pane">
 		<div id="main-pane-header">
 			<h2 id="task-title"></h2>
 			<button id="item-sort-button" class="material-icons" style="display:none">sort</button>
-			<button id="task-refresh-button" class="material-icons" title="refresh">refresh</button>
-			<button id="task-start-button" class="material-icons" title="start">play_arrow</button>
+			<button id="refresh-button" class="material-icons" title="refresh">refresh</button>
+			<button id="schedule-add-button" class="material-icons" title="add">add</button>
 		</div>
 		<ul id="sort-order-list" class='popup' style="right:10pt">
 			<li><button class="clickable" data-sort-order="updated,d">Updated, desc</button></li>
@@ -48,12 +43,13 @@
 			<li><button class="clickable" data-sort-order="size,d">Size</button></li>
 		</ul>
 
-		<div id="task-info"></div>
-		<svg id="task-graph" width="600" height="100" viewBox="0 0 800 100"></svg>
+		<div id="schedule-add-form" style="display:none">
+			Task: <select id="schedule-add-form-taskid" type='text'></select>
+			Schedule(m h D M W):<input id="schedule-add-form-schedule" type='schedule'/>
+			<button id="schedule-add-form-add">add</button>
+		</div>
 
-		<pre id="task-log" class="console"></pre>
-
-		<ul class="simple" id="task-history"></ul>
+		<ul class="simple" id="schedule-list"></ul>
 
 		<div id="item-list-loading" style="display:none">Loading...</div>
 		<div id="error" style="display:none">error.</div>
