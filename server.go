@@ -3,7 +3,9 @@ package main
 import (
 	"embed"
 	"encoding/json"
+	"errors"
 	"io/fs"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -13,6 +15,7 @@ import (
 
 var manager = NewManager(nil)
 var runner = NewRunner(nil)
+var scheduler = NewScheduler(manager, runner, "schedules.json")
 
 //go:embed static/*
 var staticFS embed.FS
@@ -52,7 +55,7 @@ func handlePostTask(w http.ResponseWriter, task *TaskConfig, vars url.Values) {
 	responseJson(w, &res)
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
+func taskHandler(w http.ResponseWriter, r *http.Request) {
 	taskID := strings.SplitN(r.URL.Path, "/", 2)[0]
 	if taskID == "" {
 		responseJson(w, manager.Tasks())
@@ -79,7 +82,31 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	responseJson(w, &res)
 }
 
+func scheduleHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		r.ParseMultipartForm(4096)
+		taskID := r.PostForm.Get("taskId")
+		schedule := r.PostForm.Get("schedule")
+		_, err := manager.Load(taskID)
+		if err != nil {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		if schedule == "" {
+			scheduler.Remove(taskID)
+		} else {
+			scheduler.Add(taskID, schedule)
+		}
+	}
+	responseJson(w, scheduler.Schedules())
+}
+
 func main() {
+	err := scheduler.Start()
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		log.Println(err)
+	}
+
 	port := os.Getenv("GOTASK_HTTP_PORT")
 	if port == "" {
 		port = "8080"
@@ -93,7 +120,8 @@ func main() {
 		static, _ := fs.Sub(staticFS, "static")
 		http.Handle("/", http.FileServer(http.FS(static)))
 	}
-	http.Handle("/tasks/", http.StripPrefix("/tasks/", http.HandlerFunc(handler)))
+	http.Handle("/tasks/", http.StripPrefix("/tasks/", http.HandlerFunc(taskHandler)))
 	http.Handle("/tasklogs/", http.StripPrefix("/tasklogs/", http.FileServer(http.Dir(runner.LogDir()))))
+	http.Handle("/schedules/", http.StripPrefix("/schedules/", http.HandlerFunc(scheduleHandler)))
 	http.ListenAndServe(host+":"+port, nil)
 }
