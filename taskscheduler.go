@@ -37,7 +37,7 @@ func (s *Scheduler) Reload() error {
 		return err
 	}
 	var schedules []*SchedulerEntry
-	if err = json.Unmarshal(bytes, &schedules); err == nil {
+	if err = json.Unmarshal(bytes, &schedules); err != nil {
 		return err
 	}
 
