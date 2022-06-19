@@ -65,6 +65,7 @@ ProcGraph.prototype.build = function(svg, onclick) {
 		if (onclick) {
 			elem.g.addEventListener('click', function(e){onclick(elem, e);});
 		}
+		elem.init && elem.init(elem);
 		svg.append(elem.g);
 		lanes[lane] ++;
 	});

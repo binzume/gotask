@@ -1,17 +1,18 @@
 package main
 
 import (
-	"encoding/json"
 	"os"
+	"sync"
 
 	"github.com/robfig/cron/v3"
+	"gopkg.in/yaml.v3"
 )
 
 type SchedulerEntry struct {
-	TaskID   string            `json:"taskId"`
-	Schedule string            `json:"schedule"`
-	Params   map[string]string `json:"params"`
-	cronid   cron.EntryID
+	TaskID string            `json:"taskId"`
+	Spec   string            `json:"spec"`
+	Params map[string]string `json:"params" yaml:"params,omitempty"`
+	cronid cron.EntryID
 }
 
 type Scheduler struct {
@@ -20,6 +21,7 @@ type Scheduler struct {
 	runner    *Runner
 	conf      string
 	c         *cron.Cron
+	mutex     sync.RWMutex
 }
 
 func NewScheduler(manager *Manager, runner *Runner, conf string) *Scheduler {
@@ -32,12 +34,14 @@ func (s *Scheduler) Start() error {
 }
 
 func (s *Scheduler) Reload() error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	bytes, err := os.ReadFile(s.conf)
 	if err != nil {
 		return err
 	}
 	var schedules []*SchedulerEntry
-	if err = json.Unmarshal(bytes, &schedules); err != nil {
+	if err = yaml.Unmarshal(bytes, &schedules); err != nil {
 		return err
 	}
 
@@ -52,9 +56,14 @@ func (s *Scheduler) Reload() error {
 	}
 	return nil
 }
-
 func (s *Scheduler) Save() error {
-	bytes, err := json.Marshal(s.schedules)
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.save()
+}
+
+func (s *Scheduler) save() error {
+	bytes, err := yaml.Marshal(s.schedules)
 	if err != nil {
 		return err
 	}
@@ -67,42 +76,71 @@ func (s *Scheduler) Save() error {
 }
 
 func (s *Scheduler) Schedules() []*SchedulerEntry {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
 	schedules := make([]*SchedulerEntry, len(s.schedules))
 	copy(schedules, s.schedules)
 	return schedules
 }
 
-func (s *Scheduler) Add(taskID, schedule string) {
+func (s *Scheduler) GetSchedule(taskId string) *SchedulerEntry {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	for _, sch := range s.schedules {
+		if sch.TaskID == taskId {
+			return sch
+		}
+	}
+	return nil
+}
+
+func (s *Scheduler) Set(taskID string, schedule string) error {
 	s.Remove(taskID)
-	ent := &SchedulerEntry{TaskID: taskID, Schedule: schedule}
-	s.schedules = append(s.schedules, ent)
-	s.register(ent)
-	s.Save()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if schedule != "" {
+		ent := &SchedulerEntry{TaskID: taskID, Spec: schedule}
+		err := s.register(ent)
+		if err != nil {
+			return err
+		}
+		s.schedules = append(s.schedules, ent)
+		err = s.save()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *Scheduler) Remove(taskID string) bool {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	for i, ent := range s.schedules {
 		if ent.TaskID == taskID {
 			s.unregister(ent)
 			s.schedules = append(s.schedules[0:i], s.schedules[i+1:]...)
-			err := s.Save()
+			err := s.save()
 			return err == nil
 		}
 	}
 	return false
 }
 
-func (s *Scheduler) register(ent *SchedulerEntry) {
+func (s *Scheduler) register(ent *SchedulerEntry) error {
 	if ent.cronid != 0 {
-		return
+		return nil
 	}
-	ent.cronid, _ = s.c.AddFunc(ent.Schedule, func() {
+	cronid, err := s.c.AddFunc(ent.Spec, func() {
 		task, err := s.manager.Load(ent.TaskID)
 		if err != nil {
 			return
 		}
 		s.runner.Start(task, ent.Params)
 	})
+	ent.cronid = cronid
+	return err
 }
 
 func (s *Scheduler) unregister(ent *SchedulerEntry) {

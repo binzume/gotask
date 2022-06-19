@@ -11,11 +11,12 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var manager = NewManager(nil)
 var runner = NewRunner(nil)
-var scheduler = NewScheduler(manager, runner, "schedules.json")
+var scheduler *Scheduler
 
 //go:embed static/*
 var staticFS embed.FS
@@ -73,11 +74,13 @@ func taskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res := struct {
-		Task   *TaskConfig `json:"task"`
-		Recent []*LogEntry `json:"recent"`
+		Task     *TaskConfig     `json:"task"`
+		Recent   []*LogEntry     `json:"recent"`
+		Schedule *SchedulerEntry `json:"schedule,omitempty"`
 	}{
-		Task:   task,
-		Recent: runner.GetHistory(taskID, 50),
+		Task:     task,
+		Recent:   runner.GetHistory(taskID, 50),
+		Schedule: scheduler.GetSchedule(taskID),
 	}
 	responseJson(w, &res)
 }
@@ -95,13 +98,23 @@ func scheduleHandler(w http.ResponseWriter, r *http.Request) {
 		if schedule == "" {
 			scheduler.Remove(taskID)
 		} else {
-			scheduler.Add(taskID, schedule)
+			err := scheduler.Set(taskID, schedule)
+			if err != nil {
+				http.Error(w, "invalid schedule", http.StatusBadRequest)
+				return
+			}
 		}
 	}
 	responseJson(w, scheduler.Schedules())
 }
 
 func main() {
+	fixedtz := os.Getenv("GOTASK_FIXED_TZ") // ex: JST-9
+	if p := strings.LastIndexAny(fixedtz, "+-"); p >= 0 {
+		offset, _ := strconv.Atoi(fixedtz[p:])
+		time.Local = time.FixedZone(fixedtz, -offset*3600)
+	}
+	scheduler = NewScheduler(manager, runner, "tasks/_schedules.yaml")
 	err := scheduler.Start()
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		log.Println(err)

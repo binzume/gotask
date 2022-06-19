@@ -31,7 +31,12 @@ class ScheduleView {
 		}
 		this.error('');
 		for (let sch of await res.json()) {
-			listEl.append(mkEl('ul', [sch.schedule, sch.taskId, mkEl('button', 'x', { onclick: () => { this.setSchedule(sch.taskId, ''); } })]));
+			listEl.append(mkEl('ul', [
+				mkEl('span', sch.taskId, { className: 'task-id' }),
+				mkEl('span', sch.spec, { className: 'task-schedule' }),
+				mkEl('button', 'edit', { onclick: () => { this.editSchedule(sch); }, className: 'material-icons' }),
+				mkEl('button', 'delete', { onclick: () => { this.setSchedule(sch.taskId, ''); }, className: 'material-icons' }),
+			]));
 		}
 	}
 
@@ -44,7 +49,35 @@ class ScheduleView {
 			this.error('Failed to set schedule for ' + taskId);
 			return;
 		}
+		document.getElementById('schedule-add-form').style.display = 'none';
 		this.updateList();
+	}
+
+	async newSchedule() {
+		document.getElementById('schedule-add-form').style.display = 'block';
+		document.getElementById('schedule-add-form-schedule').value = "30 12 * * *";
+		let res = await fetch(apiUrl + 'tasks/');
+		if (!res.ok) {
+			this.error('failed to fetch task list.');
+			return;
+		}
+		let tasks = await res.json();
+		let selectEl = document.getElementById('schedule-add-form-taskid');
+		selectEl.innerHTML = '';
+		selectEl.disabled = false;
+		this.error('');
+		for (let t of tasks) {
+			selectEl.append(mkEl('option', t.taskId, { value: t.taskId }));
+		}
+	}
+
+	editSchedule(sch) {
+		document.getElementById('schedule-add-form').style.display = 'block';
+		document.getElementById('schedule-add-form-schedule').value = sch.spec;
+		let selectEl = document.getElementById('schedule-add-form-taskid');
+		selectEl.disabled = true;
+		selectEl.innerHTML = '';
+		selectEl.append(mkEl('option', sch.taskId, { value: sch.taskId, selected: true }));
 	}
 
 	error(msg) {
@@ -60,34 +93,19 @@ window.addEventListener('DOMContentLoaded', (function (e) {
 
 	scheduleView.updateList();
 
-	document.getElementById('refresh-button').addEventListener('click', async (e) => {
+	document.getElementById('refresh-button').addEventListener('click', (e) => {
 		document.getElementById('schedule-add-form').style.display = 'none';
 		scheduleView.updateList();
 	});
 
-
-	document.getElementById('schedule-add-button').addEventListener('click', async (e) => {
+	document.getElementById('schedule-add-button').addEventListener('click', (e) => {
 		e.preventDefault();
-		document.getElementById('schedule-add-form').style.display = 'block';
-		document.getElementById('schedule-add-form-schedule').value = "30 12 * * *";
-		let res = await fetch(apiUrl + 'tasks/');
-		if (!res.ok) {
-			scheduleView.error('failed to fetch task list.');
-			return;
-		}
-		let tasks = await res.json();
-		let selectEl = document.getElementById('schedule-add-form-taskid');
-		selectEl.innerHTML = '';
-		scheduleView.error('');
-		for (let t of tasks) {
-			selectEl.append(mkEl('option', t.taskId, { value: t.taskId }));
-		}
+		scheduleView.newSchedule();
 	});
 
-	document.getElementById('schedule-add-form-add').addEventListener('click', (e) => {
+	document.getElementById('schedule-add-form').addEventListener('submit', (e) => {
 		e.preventDefault();
 		scheduleView.setSchedule(document.getElementById('schedule-add-form-taskid').value, document.getElementById('schedule-add-form-schedule').value);
-		document.getElementById('schedule-add-form').style.display = 'none';
 	});
 
 	let initPopup = function (button, popup, className) {

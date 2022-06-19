@@ -72,7 +72,7 @@ header input[type="text"], header input[type="password"] {
 	margin: 0pt;
 	padding: 0pt;
 	overflow: hidden;
-	overflow-y: scroll;
+	overflow-y: auto;
 	background-color: rgba(255,255,255,0.8);
 	box-shadow: 0px 0px 6px #777;
 }
@@ -236,6 +236,7 @@ ul.popup {
 	min-width: 8em;
 	max-height: 90vh;
 	overflow-y: auto;
+	overflow-x: hidden;
 	z-index: 10;
 	box-shadow: 3pt 4pt 6pt 0pt #777;
 	color: black;
@@ -531,4 +532,27 @@ div.simple-box {
 
 #task-info .task-errormessage {
 	color:red;
+}
+
+#schedule-add-form {
+	max-width: 400pt;
+	margin: 0 auto;
+	border: 2px solid #bbb;
+	border-radius: 5px;
+}
+
+#schedule-list button.material-icons {
+	font-size: 12pt;
+	padding: 0;
+	min-width: 20pt;
+	min-height: 20pt;
+}
+#schedule-list .task-id {
+	font-weight: bold;
+}
+#schedule-list .task-schedule {
+	margin: 0 8pt;
+	padding: 0 4pt;
+	border-radius: 4px;
+	background-color: #eee;
 }

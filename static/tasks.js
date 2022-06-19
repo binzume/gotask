@@ -1,7 +1,6 @@
 "use strict";
 
 const apiUrl = '';
-const settingName = 'localConfig';
 
 /**
  * @param {string} tag 
@@ -81,7 +80,7 @@ class TaskView {
 				color = '#ff6';
 			}
 			let time = step.finishedAt ? '(' + formatTime(step.finishedAt - step.startedAt) + ')' : '';
-			var o = { id: step.name, type: 'task', o: step, srcIds: step.depends || [], text: (step.status || '') + time, lane: 0, connectColor: 'black', color: color };
+			let o = { id: step.name, type: 'task', o: step, srcIds: step.depends || [], text: (step.status || '') + time, lane: 0, connectColor: 'black', color: color };
 			if (graph.ids[o.srcIds[0]]) {
 				o.lane = graph.ids[o.srcIds[0]].lane + 1;
 			}
@@ -160,6 +159,15 @@ class TaskView {
 		logEl.scrollTop = logEl.scrollHeight;
 	}
 
+	selectRun(run) {
+		if (run != null) {
+			this.updateTaskInfo(run.task);
+		} else {
+			let infoEl = document.getElementById('task-info');
+			infoEl.innerText = 'No runs';
+		}
+	}
+
 	async updateTask(taskId) {
 		let titleEl = document.getElementById('task-title');
 		let historyEl = document.getElementById('task-history');
@@ -180,10 +188,15 @@ class TaskView {
 		}
 		let taskRes = await res.json();
 
-		this.updateGraph(taskRes.recent && taskRes.recent[0] || taskRes);
+		let lastRun = taskRes.recent && taskRes.recent[0];
+		this.updateGraph(lastRun || taskRes);
+		this.selectRun(lastRun);
 
 		historyEl.innerText = '';
-		titleEl.innerText = taskRes.task.name;
+		titleEl.innerText = taskId;
+		if (taskRes.schedule) {
+			titleEl.innerText += `(${taskRes.schedule.spec})`;
+		}
 		for (let log of taskRes.recent || []) {
 			let t = log.task;
 			let start = t.startedAt ? formatDate(t.startedAt) : "wait";
@@ -191,7 +204,7 @@ class TaskView {
 			let el = mkEl('li', [
 				mkEl('span', start, { className: 'task-date' }),
 				mkEl('span', t.status, { className: 'status status-' + t.status }),
-			], { className: 'log' });
+			], { className: 'log', title: 'Run:' + log.runId });
 			for (let st of t.steps || []) {
 				el.append(mkEl('span', '.', { className: 'status-' + st.status }));
 			}
@@ -208,27 +221,29 @@ class TaskView {
 			historyEl.append(el);
 			el.onclick = () => {
 				this.updateGraph(log);
-				this.updateTaskInfo(null);
+				this.selectRun(log);
 				this.updateTaskLog(null);
 			};
 		}
 	}
-}
 
-async function updateTaskList() {
-	let listEl = document.getElementById('task-list');
-	listEl.innerText = '';
+	async updateTaskList() {
+		let listEl = document.getElementById('task-list');
+		listEl.innerText = '';
 
-	let res = await fetch(apiUrl + 'tasks/');
-	let tasks = await res.json();
+		let res = await fetch(apiUrl + 'tasks/');
+		let tasks = await res.json();
 
-	for (let t of tasks) {
-		listEl.append(mkEl('li', mkEl('a', t.taskId, { title: t.taskId, href: '#task:' + t.taskId }), { className: 'task' }));
+		for (let t of tasks) {
+			listEl.append(mkEl('li', mkEl('a', t.taskId, { title: t.taskId, href: '#task:' + t.taskId }), { className: 'task' }));
+		}
 	}
 }
 
+
 window.addEventListener('DOMContentLoaded', (function (e) {
 	let taskView = new TaskView();
+	taskView.updateTaskList();
 
 	function checkUrlFragment() {
 		if (!location.hash) {
@@ -241,15 +256,12 @@ window.addEventListener('DOMContentLoaded', (function (e) {
 		}
 		return false;
 	}
-
-	updateTaskList();
 	checkUrlFragment();
 
 	window.addEventListener('hashchange', (e) => {
 		e.preventDefault();
 		checkUrlFragment();
 	}, false);
-
 
 	document.getElementById('task-start-button').addEventListener('click', (e) => {
 		e.preventDefault();
@@ -281,5 +293,4 @@ window.addEventListener('DOMContentLoaded', (function (e) {
 	};
 	initPopup(document.querySelector('#menu-button'), document.querySelector('#menu-pane'), "override_menu_visible");
 	initPopup(document.querySelector('#option-menu-button'), document.querySelector("#option-menu"), "active");
-	initPopup(document.querySelector('#item-sort-button'), document.querySelector("#sort-order-list"), "active");
 }));

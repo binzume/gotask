@@ -15,14 +15,14 @@
 	<header>
 		<ul class="menubar">
 			<li id="menu-button" class="clickable">≡</li>
-			<li><a href="./">TaskRunner</a></li>
+			<li>TaskRunner</li>
 			<li><a href="./">Tasks</a></li>
-			<li class="selected">Schedules</li>
+			<li class="selected"><a href="./schedule.html">Schedules</a></li>
 			<li id="option-menu-button" style="float:right" class="clickable">...</li>
 		</ul>
 		<ul id="option-menu" class='popup' style="right:4pt">
-			<li><a href="./readme.html">Readme</a></li>
-			<li style="_display:none"><a href="/logout">Logout</a></li>
+			<li><a href="https://github.com/binzume/gotask/" target="_blank" rel="noopener">GitHub</a></li>
+			<li style="display:none"><a href="/logout">Logout</a></li>
 		</ul>
 	</header>
 
@@ -43,16 +43,17 @@
 			<li><button class="clickable" data-sort-order="size,d">Size</button></li>
 		</ul>
 
-		<div id="schedule-add-form" style="display:none">
-			Task: <select id="schedule-add-form-taskid" type='text'></select>
+		<div id="item-list-loading" style="display:none">Loading...</div>
+		<div id="error" style="display:none">error.</div>
+
+		<form id="schedule-add-form" style="display:none">
+			Task: <select id="schedule-add-form-taskid" type='text'></select><br />
 			Schedule(m h D M W):<input id="schedule-add-form-schedule" type='schedule'/>
-			<button id="schedule-add-form-add">add</button>
-		</div>
+			<button id="schedule-add-form-add" type="submit">Save</button>
+		</form>
 
 		<ul class="simple" id="schedule-list"></ul>
 
-		<div id="item-list-loading" style="display:none">Loading...</div>
-		<div id="error" style="display:none">error.</div>
 	</div>
 
 	</div>
