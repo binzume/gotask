@@ -31,17 +31,9 @@
 	<div id="main-pane">
 		<div id="main-pane-header">
 			<h2 id="task-title"></h2>
-			<button id="item-sort-button" class="material-icons" style="display:none">sort</button>
 			<button id="refresh-button" class="material-icons" title="refresh">refresh</button>
 			<button id="schedule-add-button" class="material-icons" title="add">add</button>
 		</div>
-		<ul id="sort-order-list" class='popup' style="right:10pt">
-			<li><button class="clickable" data-sort-order="updated,d">Updated, desc</button></li>
-			<li><button class="clickable" data-sort-order="updated,a">Updated, asc</button></li>
-			<li><button class="clickable" data-sort-order="name,d">Name, desc</button></li>
-			<li><button class="clickable" data-sort-order="name,a">Name, asc</button></li>
-			<li><button class="clickable" data-sort-order="size,d">Size</button></li>
-		</ul>
 
 		<div id="item-list-loading" style="display:none">Loading...</div>
 		<div id="error" style="display:none">error.</div>
@@ -49,7 +41,8 @@
 		<form id="schedule-add-form" style="display:none">
 			Task: <select id="schedule-add-form-taskid" type='text'></select><br />
 			Schedule(m h D M W):<input id="schedule-add-form-schedule" type='schedule'/>
-			<button id="schedule-add-form-add" type="submit">Save</button>
+			<button type="submit">Save</button>
+			<button id="schedule-add-cancel">Cancel</button>
 		</form>
 
 		<ul class="simple" id="schedule-list"></ul>

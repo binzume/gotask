@@ -1,5 +1,5 @@
+// @ts-check
 "use strict";
-
 const apiUrl = '';
 
 /**
@@ -18,8 +18,24 @@ let mkEl = (tag, children, attrs) => {
 
 class ScheduleView {
 	constructor() {
+		document.getElementById('refresh-button').addEventListener('click', (e) => {
+			e.preventDefault();
+			document.getElementById('schedule-add-form').style.display = 'none';
+			this.updateList();
+		});
+		document.getElementById('schedule-add-button').addEventListener('click', (e) => {
+			e.preventDefault();
+			this.newSchedule();
+		});
+		document.getElementById('schedule-add-form').addEventListener('submit', (e) => {
+			e.preventDefault();
+			this.setSchedule(document.getElementById('schedule-add-form-taskid').value, document.getElementById('schedule-add-form-schedule').value);
+		});
+		document.getElementById('schedule-add-cancel').addEventListener('click', (e) => {
+			e.preventDefault();
+			document.getElementById('schedule-add-form').style.display = 'none';
+		});
 	}
-
 
 	async updateList() {
 		let listEl = document.getElementById('schedule-list');
@@ -88,38 +104,19 @@ class ScheduleView {
 }
 
 
-window.addEventListener('DOMContentLoaded', (function (e) {
+window.addEventListener('DOMContentLoaded', function (e) {
 	let scheduleView = new ScheduleView();
-
 	scheduleView.updateList();
 
-	document.getElementById('refresh-button').addEventListener('click', (e) => {
-		document.getElementById('schedule-add-form').style.display = 'none';
-		scheduleView.updateList();
-	});
-
-	document.getElementById('schedule-add-button').addEventListener('click', (e) => {
-		e.preventDefault();
-		scheduleView.newSchedule();
-	});
-
-	document.getElementById('schedule-add-form').addEventListener('submit', (e) => {
-		e.preventDefault();
-		scheduleView.setSchedule(document.getElementById('schedule-add-form-taskid').value, document.getElementById('schedule-add-form-schedule').value);
-	});
-
-	let initPopup = function (button, popup, className) {
-		button.addEventListener("click", (ev) => {
+	let initPopup = function (buttonEl, popup, className) {
+		buttonEl.addEventListener("click", (ev) => {
 			ev.preventDefault();
-			ev.stopPropagation();
 			popup.classList.toggle(className);
 			if (popup.classList.contains(className)) {
 				setTimeout(function () {
 					window.addEventListener('click', function dismiss(ev) {
 						window.removeEventListener('click', dismiss, false);
-						if (popup.classList.contains(className)) {
-							popup.classList.remove(className);
-						}
+						popup.classList.remove(className);
 					}, false);
 				}, 1);
 			}
@@ -127,5 +124,4 @@ window.addEventListener('DOMContentLoaded', (function (e) {
 	};
 	initPopup(document.querySelector('#menu-button'), document.querySelector('#menu-pane'), "override_menu_visible");
 	initPopup(document.querySelector('#option-menu-button'), document.querySelector("#option-menu"), "active");
-	initPopup(document.querySelector('#item-sort-button'), document.querySelector("#sort-order-list"), "active");
-}));
+}, { once: true });

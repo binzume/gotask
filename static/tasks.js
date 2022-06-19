@@ -30,26 +30,21 @@ function formatDate(s) {
 		[d2(t.getHours()), d2(t.getMinutes())].join(":");
 }
 
-function formatSize(size) {
-	if (size == null) {
-		return "";
-	}
-	if (size > 1024 * 1024 * 1024 * 10) {
-		return (size / (1024 * 1024 * 1024) | 0) + "GiB";
-	}
-	if (size > 1024 * 1024 * 10) {
-		return (size / (1024 * 1024) | 0) + "MiB";
-	}
-	if (size > 1024 * 10) {
-		return (size / (1024) | 0) + "KiB";
-	}
-	return size + "B"
-}
-
 class TaskView {
 	constructor() {
 		this.currentTask = null;
 		this.currentLog = null;
+
+		document.getElementById('task-start-button').addEventListener('click', (e) => {
+			e.preventDefault();
+			this.startTask();
+		});
+
+		document.getElementById('task-refresh-button').addEventListener('click', (e) => {
+			e.preventDefault();
+			this.updateTask(taskView.currentTask);
+			this.updateTaskLog(taskView.currentLog);
+		});
 	}
 
 	updateGraph(log) {
@@ -263,29 +258,15 @@ window.addEventListener('DOMContentLoaded', (function (e) {
 		checkUrlFragment();
 	}, false);
 
-	document.getElementById('task-start-button').addEventListener('click', (e) => {
-		e.preventDefault();
-		taskView.startTask();
-	});
-
-	document.getElementById('task-refresh-button').addEventListener('click', (e) => {
-		e.preventDefault();
-		taskView.updateTask(taskView.currentTask);
-		taskView.updateTaskLog(taskView.currentLog);
-	});
-
-	let initPopup = function (button, popup, className) {
-		button.addEventListener("click", (ev) => {
+	function initPopup(buttonEl, popup, className) {
+		buttonEl.addEventListener("click", (ev) => {
 			ev.preventDefault();
-			ev.stopPropagation();
 			popup.classList.toggle(className);
 			if (popup.classList.contains(className)) {
 				setTimeout(function () {
 					window.addEventListener('click', function dismiss(ev) {
 						window.removeEventListener('click', dismiss, false);
-						if (popup.classList.contains(className)) {
-							popup.classList.remove(className);
-						}
+						popup.classList.remove(className);
 					}, false);
 				}, 1);
 			}
