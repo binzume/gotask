@@ -45,6 +45,15 @@ class TaskView {
 			this.updateTask(taskView.currentTask);
 			this.updateTaskLog(taskView.currentLog);
 		});
+
+		let searchTimeout = null;
+		let filterEl = document.getElementById('task-filter');
+		filterEl.addEventListener('input', (ev) => {
+			clearTimeout(searchTimeout);
+			searchTimeout = setTimeout(() => {
+				this.setTaskFilter(filterEl.value);
+			}, 300);
+		});
 	}
 
 	updateGraph(log) {
@@ -230,7 +239,18 @@ class TaskView {
 		let tasks = await res.json();
 
 		for (let t of tasks) {
-			listEl.append(mkEl('li', mkEl('a', t.taskId, { title: t.taskId, href: '#task:' + t.taskId }), { className: 'task' }));
+			let el = mkEl('li', mkEl('a', t.taskId, { title: t.taskId, href: '#task:' + t.taskId }), { className: 'task' });
+			el.dataset.taskId = t.taskId;
+			listEl.append(el);
+		}
+	}
+
+	setTaskFilter(filter) {
+		let listEl = document.getElementById('task-list');
+		for (let el of listEl.children) {
+			if (el.dataset.taskId) {
+				el.style.display = el.dataset.taskId.includes(filter) ? 'block' : 'none';
+			}
 		}
 	}
 }
