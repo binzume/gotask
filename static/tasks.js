@@ -56,17 +56,17 @@ class TaskView {
 		});
 	}
 
-	updateGraph(log) {
+	updateGraph(run) {
 		let svg = document.getElementById('task-graph');
 		let graph = new TaskGraph();
 		svg.innerHTML = '';
-		if (!log || !log.task) {
+		if (!run || !run.task) {
 			return;
 		}
 
-		let steps = log.task.steps;
+		let steps = run.task.steps;
 		if (!steps || !steps.length) {
-			steps = [log.task];
+			steps = [run.task];
 		}
 		for (let step of steps) {
 			let color = 'white';
@@ -164,6 +164,11 @@ class TaskView {
 	}
 
 	selectRun(run) {
+		if  (run?.task?.steps == null && run?.task?.logFile) {
+			this.updateTaskLog(run.task.logFile);
+		} else {
+			this.updateTaskLog(null);
+		}
 		if (run != null) {
 			this.updateTaskInfo(run.task);
 		} else {
@@ -226,7 +231,6 @@ class TaskView {
 			el.onclick = () => {
 				this.updateGraph(log);
 				this.selectRun(log);
-				this.updateTaskLog(null);
 			};
 		}
 	}
