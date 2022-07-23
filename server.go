@@ -49,9 +49,13 @@ func handlePostTask(w http.ResponseWriter, task *TaskConfig, vars url.Values) {
 				params[k[5:]] = v[0]
 			}
 		}
-		ent := runner.Start(task, params)
-		res.RunID = ent.RunID
-		res.Ok = true
+		ent, err := runner.Start(task, params)
+		if err == nil {
+			res.RunID = ent.RunID
+			res.Ok = true
+		} else {
+			res.Ok = false
+		}
 	}
 	responseJson(w, &res)
 }

@@ -94,7 +94,7 @@ func (r *Runner) LogDir() string {
 	return r.logDir
 }
 
-func (r *Runner) Start(config *TaskConfig, params map[string]string) *LogEntry {
+func (r *Runner) Start(config *TaskConfig, params map[string]string) (*LogEntry, error) {
 	// TODO: validate task graph before start.
 	log := &LogEntry{
 		TaskID: config.TaskID,
@@ -102,13 +102,16 @@ func (r *Runner) Start(config *TaskConfig, params map[string]string) *LogEntry {
 		Task:   NewTaskLog(config),
 		Params: params,
 	}
+	if !config.AllowParallel && r.exists(config.TaskID, params) {
+		return nil, fmt.Errorf("Already running")
+	}
 	state := r.startInternal(context.Background(), config, log, log.Task)
 	r.addTask(state)
 	go func() {
 		state.wait()
 		r.finishTask(state)
 	}()
-	return log
+	return log, nil
 }
 
 func (r *Runner) startInternal(ctx context.Context, config *TaskConfig, logEnt *LogEntry, log *TaskState) *runState {
@@ -196,10 +199,11 @@ func (r *Runner) GetHistory(taskID string, limit int) []*LogEntry {
 	return log
 }
 
-func (state *runState) tryStartSteps(r *Runner, ctx context.Context, steps map[string]*TaskState, stepsState map[string]bool, done chan struct{}) int {
+func (state *runState) tryStartSteps(r *Runner, ctx context.Context, steps map[string]*TaskState, done chan struct{}) int {
 	startCount := 0
 	for _, child := range state.config.Steps {
-		if _, ok := stepsState[child.Name]; ok {
+		clog := steps[child.Name]
+		if clog.Status != "" {
 			// already started
 			continue
 		}
@@ -217,11 +221,8 @@ func (state *runState) tryStartSteps(r *Runner, ctx context.Context, steps map[s
 		if child.Dir == "" {
 			child.Dir = state.config.Dir
 		}
-		clog := steps[child.Name]
 
 		cs := r.startInternal(ctx, child, state.log, clog)
-		name := child.Name
-		stepsState[name] = false
 		startCount++
 		go func() {
 			cs.wait()
@@ -245,10 +246,9 @@ func (state *runState) run(ctx context.Context, r *Runner) {
 	}
 
 	runnings := 0
-	stepsState := map[string]bool{}
 	stepDone := make(chan struct{})
 	for {
-		runnings += state.tryStartSteps(r, ctx, steps, stepsState, stepDone)
+		runnings += state.tryStartSteps(r, ctx, steps, stepDone)
 		if runnings == 0 {
 			break
 		}
@@ -336,6 +336,29 @@ func NewTaskLog(task *TaskConfig) *TaskState {
 		Name:    task.Name,
 		Depends: task.Depends,
 	}
+}
+
+func mapEqual[K, V comparable](a map[K]V, b map[K]V) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, va := range a {
+		if vb, ok := b[k]; !ok || vb != va {
+			return false
+		}
+	}
+	return true
+}
+
+func (r *Runner) exists(taskID string, params map[string]string) bool {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	for _, t := range r.runnings {
+		if t.log.TaskID == taskID && mapEqual(t.log.Params, params) {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *Runner) addTask(state *runState) {
