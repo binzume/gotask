@@ -47,7 +47,11 @@ func fetch(r *JsRunner) any {
 			for k, v := range resp.Header {
 				resHeaders[k] = v
 			}
-			return map[string]any{"body": body, "text": func() string { return string(body) }, "status": resp.StatusCode, "headers": resHeaders}, nil
+			return map[string]any{
+				"text":        func() string { return string(body) },
+				"bytes":       func() any { return body },
+				"arrayBuffer": func() any { return r.vmUnsafe.NewArrayBuffer(body) },
+				"status":      resp.StatusCode, "headers": resHeaders}, nil
 		})
 	}
 }

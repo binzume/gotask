@@ -5,6 +5,7 @@ import (
 	"embed"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
@@ -47,14 +48,34 @@ func handlePostTask(ctx context.Context, w http.ResponseWriter, task *TaskConfig
 		res.RunID = id
 	} else if action == "invoke" {
 		params := map[string]any{}
+		for k, v := range task.Variables {
+			params[k] = v
+		}
 		for k, v := range vars {
 			if strings.HasPrefix(k, "VARS.") {
 				params[k[5:]] = v[0]
+			} else if strings.HasPrefix(k, "PARAMS.") {
+				params[k[7:]] = v[0]
 			}
 		}
+		fmt.Println(params)
 		// TODO log
 		r := task.Run(ctx, params, nil)
 		if r.Success && r.Result != nil {
+			if body, ok := r.Result["body"].(string); ok {
+				if headers, ok := r.Result["headers"].(map[string]any); ok {
+					for k, v := range headers {
+						w.Header().Set(k, fmt.Sprint(v))
+					}
+				} else {
+					w.Header().Set("Content-Type", "text/plain")
+				}
+				if status, ok := r.Result["statusCode"].(int); ok {
+					w.WriteHeader(status)
+				}
+				w.Write([]byte(body))
+				return
+			}
 			responseJson(w, r.Result)
 			return
 		}
@@ -65,6 +86,8 @@ func handlePostTask(ctx context.Context, w http.ResponseWriter, task *TaskConfig
 		for k, v := range vars {
 			if strings.HasPrefix(k, "VARS.") {
 				params[k[5:]] = v[0]
+			} else if strings.HasPrefix(k, "PARAMS.") {
+				params[k[7:]] = v[0]
 			}
 		}
 		ent, err := runner.Start(task, params)
