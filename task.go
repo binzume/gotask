@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,6 +15,7 @@ import (
 type TaskConfig struct {
 	Name             string `json:"name"`
 	Description      string `json:"desc"`
+	Runtime          string `json:"runtime"`
 	Command          string `json:"command"`
 	Env              map[string]string
 	Variables        map[string]interface{}
@@ -27,6 +30,13 @@ type TaskConfig struct {
 	TaskID string `json:"taskId"`
 }
 
+type TaskResult struct {
+	Success  bool
+	Canceled bool
+	Result   map[string]any
+	Message  string
+}
+
 func (conf *TaskConfig) FixDependencies() {
 	for i, t := range conf.Steps {
 		if conf.Sequential {
@@ -37,6 +47,14 @@ func (conf *TaskConfig) FixDependencies() {
 			}
 		}
 		t.FixDependencies()
+	}
+}
+
+func (c *TaskConfig) Run(ctx context.Context, params map[string]any, log io.Writer) *TaskResult {
+	if c.Runtime == "js" {
+		return RunJs(ctx, c, params, log)
+	} else {
+		return RunSh(ctx, c, params, log)
 	}
 }
 

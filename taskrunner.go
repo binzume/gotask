@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sync"
 	"time"
@@ -286,31 +285,23 @@ func (state *runState) run(ctx context.Context, r *Runner) {
 			state.task.Status = "success"
 			return
 		}
+
 		state.task.LogFile = fmt.Sprintf("%s/%d_%s.log", state.log.TaskID, state.log.RunID, state.task.Name)
 		logPath := filepath.Join(r.logDir, state.task.LogFile)
 		_ = os.MkdirAll(filepath.Dir(logPath), os.ModePerm)
-		cmd := exec.CommandContext(ctx, "bash", "-c", state.config.Command)
-		cmd.Dir = state.config.Dir
-		cmd.Env = os.Environ()
 		log, _ := os.Create(logPath)
 		if log != nil {
-			cmd.Stdout = log
-			cmd.Stderr = log
 			defer log.Close()
 		}
-		for n, v := range state.config.Env {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", n, v))
-		}
-		for n, v := range state.config.Variables {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%v", n, v))
-		}
-		_ = cmd.Run()
-		state.task.FinishedAt = time.Now().UnixMilli()
 
-		code := cmd.ProcessState.ExitCode()
-		if code != 0 && code == state.config.CanceledExitCode {
+		result := state.config.Run(ctx, state.config.Variables, log)
+
+		state.task.FinishedAt = time.Now().UnixMilli()
+		state.task.Message = result.Message
+
+		if result.Canceled {
 			state.task.Status = "canceled"
-		} else if code != 0 {
+		} else if !result.Success {
 			select {
 			case <-ctx.Done():
 				state.task.Status = "canceled"
@@ -318,7 +309,6 @@ func (state *runState) run(ctx context.Context, r *Runner) {
 			default:
 			}
 			state.task.Status = "failed"
-			state.task.Message = "command exited with code " + fmt.Sprint(code)
 		} else {
 			state.task.Status = "success"
 		}

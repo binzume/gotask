@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"encoding/json"
 	"errors"
@@ -31,17 +32,34 @@ func responseJson(w http.ResponseWriter, res interface{}) {
 	w.Write(json)
 }
 
-func handlePostTask(w http.ResponseWriter, task *TaskConfig, vars url.Values) {
+func handlePostTask(ctx context.Context, w http.ResponseWriter, task *TaskConfig, vars url.Values) {
 	res := struct {
-		TaskID string `json:"taskId"`
-		RunID  int64  `json:"runId"`
-		Ok     bool   `json:"ok"`
+		TaskID  string `json:"taskId"`
+		RunID   int64  `json:"runId"`
+		Ok      bool   `json:"ok"`
+		Message string `json:"message,omitempty"`
 	}{}
 	res.TaskID = task.TaskID
-	if vars.Get("action") == "stop" {
+	action := vars.Get("action")
+	if action == "stop" {
 		id, _ := strconv.ParseInt(vars.Get("runId"), 10, 64)
 		res.Ok = runner.Stop(task.TaskID, id)
 		res.RunID = id
+	} else if action == "invoke" {
+		params := map[string]any{}
+		for k, v := range vars {
+			if strings.HasPrefix(k, "VARS.") {
+				params[k[5:]] = v[0]
+			}
+		}
+		// TODO log
+		r := task.Run(ctx, params, nil)
+		if r.Success && r.Result != nil {
+			responseJson(w, r.Result)
+			return
+		}
+		res.Message = r.Message
+		res.Ok = r.Success
 	} else {
 		params := map[string]string{}
 		for k, v := range vars {
@@ -73,7 +91,7 @@ func taskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.Method == "POST" {
 		r.ParseMultipartForm(4096)
-		handlePostTask(w, task, r.PostForm)
+		handlePostTask(r.Context(), w, task, r.PostForm)
 		return
 	}
 
