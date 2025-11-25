@@ -2,7 +2,7 @@
 
 事前に登録したタスクをブラウザやREST APIから実行する簡易タスクランナーです．
 
-- ブラウザからシェルスクリプトの実行・停止・結果の確認ができます
+- ブラウザからJavaScriptやシェルスクリプトで書かれた処理の実行・停止・結果の確認ができます
 - 任意のDAGとして表現されたタスクを実行できます
 - Cronスタイルのスケジュールを登録できます
 - **とりあえずシェルスクリプトを置くだけでタスクとして登録されます**
@@ -65,4 +65,30 @@ steps:
     depends:
       - step1
       - step2
+```
+
+## JavaScript
+
+部分的なサポートですが、fs, child_process, fetch APIあたりは動作します。
+
+1秒待ってから、Hello, world!を返すタスクの例。(handlerの定義はAWS Lambda互換です)
+
+```js
+exports.handler = async (event) => {
+    await new Promise((r) => setTimeout(r, 1000));
+    return {
+        "statusCode": 200,
+        "headers": {
+            "Content-Type": "text/plan",
+        },
+        "body": "Hello, world!"
+    };
+};
+```
+
+```js
+exports.handler = async (event) => {
+    await new Promise((r) => setTimeout(r, 1000));
+    return "Hello, world!";
+};
 ```

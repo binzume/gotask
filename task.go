@@ -117,6 +117,16 @@ func (m *Manager) loadSh(taskId string, task *TaskConfig) error {
 	return err
 }
 
+func (m *Manager) loadJs(taskId string, task *TaskConfig) error {
+	task.Name = taskId
+	_, err := os.Stat(filepath.Join(m.tasksDir, taskId+".js"))
+	if err == nil {
+		task.Runtime = "js"
+		task.Command = "./" + taskId + ".js"
+	}
+	return err
+}
+
 func (m *Manager) Load(taskId string) (*TaskConfig, error) {
 	var task TaskConfig
 	task.Dir = m.tasksDir
@@ -130,6 +140,13 @@ func (m *Manager) Load(taskId string) (*TaskConfig, error) {
 			task.Command = "./" + taskId + ".sh"
 		}
 	}
+	if errors.Is(err, os.ErrNotExist) {
+		err = m.loadJs(taskId, &task)
+		if err == nil {
+			task.Command = "./" + taskId + ".js"
+		}
+	}
+
 	if err != nil {
 		return nil, err
 	}
