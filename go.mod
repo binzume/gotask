@@ -1,6 +1,6 @@
 module github.com/binzume/gotask
 
-go 1.18
+go 1.20
 
 require (
 	github.com/dop251/goja v0.0.0-20251121114222-56b1242a5f86

@@ -8,17 +8,19 @@ import (
 	"github.com/dop251/goja_nodejs/require"
 )
 
-func ReadFileSync(path string) string {
-	f, err := os.Open(path)
-	if err != nil {
-		return ""
+func makeReadFileSync(vm *goja.Runtime) any {
+	return func(path string, options map[string]any) any {
+		f, err := os.Open(path)
+		if err != nil {
+			return ""
+		}
+		defer f.Close()
+		data, err := io.ReadAll(f)
+		if err != nil {
+			return ""
+		}
+		return convOutput(data, vm, options)
 	}
-	defer f.Close()
-	data, err := io.ReadAll(f)
-	if err != nil {
-		return ""
-	}
-	return string(data)
 }
 
 func WriteFileSync(path, text string) error {
@@ -41,9 +43,9 @@ func AppendFileSync(path, text string) error {
 	return err
 }
 
-func ReadFileAsync(r *JsRunner) any {
+func ReadFileAsync(r TaskQueue) any {
 	return func(name string) goja.Value {
-		return r.GoAsync(func() (any, error) {
+		return r.StartGoroutineTask(func() (any, error) {
 			f, err := os.Open(name)
 			if err != nil {
 				return nil, err
@@ -55,9 +57,9 @@ func ReadFileAsync(r *JsRunner) any {
 	}
 }
 
-func WriteFileAsync(r *JsRunner) any {
+func WriteFileAsync(r TaskQueue) any {
 	return func(name, text string) goja.Value {
-		return r.GoAsync(func() (any, error) {
+		return r.StartGoroutineTask(func() (any, error) {
 			f, err := os.Create(name)
 			if err != nil {
 				return nil, err
@@ -70,7 +72,7 @@ func WriteFileAsync(r *JsRunner) any {
 }
 
 func SetupFsPromises(runtime *goja.Runtime, o *goja.Object) {
-	if r := GetJsRunner(runtime); r != nil {
+	if r := GetTaskQueue(runtime); r != nil {
 		o.Set("readFile", ReadFileAsync(r))
 		o.Set("writeFile", WriteFileAsync(r))
 	}
@@ -78,7 +80,7 @@ func SetupFsPromises(runtime *goja.Runtime, o *goja.Object) {
 
 func RequireFs(runtime *goja.Runtime, module *goja.Object) {
 	o := module.Get("exports").(*goja.Object)
-	o.Set("readFileSync", ReadFileSync)
+	o.Set("readFileSync", makeReadFileSync(runtime))
 	o.Set("appendFileSync", AppendFileSync)
 	o.Set("writeFileSync", WriteFileSync)
 	po := runtime.NewObject()

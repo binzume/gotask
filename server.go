@@ -59,7 +59,8 @@ func handlePostTask(ctx context.Context, w http.ResponseWriter, task *TaskConfig
 			}
 		}
 		fmt.Println(params)
-		// TODO log
+		// TODO: lock
+		// runner.appendLog(&LogEntry{TaskID: task.TaskID})
 		r := task.Run(ctx, params, nil)
 		if r.Success && r.Result != nil {
 			if body, ok := r.Result["body"].(string); ok {
@@ -82,7 +83,7 @@ func handlePostTask(ctx context.Context, w http.ResponseWriter, task *TaskConfig
 		res.Message = r.Message
 		res.Ok = r.Success
 	} else {
-		params := map[string]string{}
+		params := map[string]any{}
 		for k, v := range vars {
 			if strings.HasPrefix(k, "VARS.") {
 				params[k[5:]] = v[0]

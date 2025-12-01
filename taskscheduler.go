@@ -9,9 +9,9 @@ import (
 )
 
 type SchedulerEntry struct {
-	TaskID string            `json:"taskId"`
-	Spec   string            `json:"spec"`
-	Params map[string]string `json:"params" yaml:"params,omitempty"`
+	TaskID string         `json:"taskId"`
+	Spec   string         `json:"spec"`
+	Params map[string]any `json:"params" yaml:"params,omitempty"`
 	cronid cron.EntryID
 }
 

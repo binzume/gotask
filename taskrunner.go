@@ -41,7 +41,7 @@ type LogEntry struct {
 	RunID  int64      `json:"runId"`
 	Task   *TaskState `json:"task"`
 
-	Params map[string]string `json:"params,omitempty"`
+	Params map[string]any `json:"params,omitempty"`
 }
 
 type TaskState struct {
@@ -93,7 +93,7 @@ func (r *Runner) LogDir() string {
 	return r.logDir
 }
 
-func (r *Runner) Start(config *TaskConfig, params map[string]string) (*LogEntry, error) {
+func (r *Runner) Start(config *TaskConfig, params map[string]any) (*LogEntry, error) {
 	// TODO: validate task graph before start.
 	log := &LogEntry{
 		TaskID: config.TaskID,
@@ -340,7 +340,7 @@ func mapEqual[K, V comparable](a map[K]V, b map[K]V) bool {
 	return true
 }
 
-func (r *Runner) exists(taskID string, params map[string]string) bool {
+func (r *Runner) exists(taskID string, params map[string]any) bool {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	for _, t := range r.runnings {

@@ -52,7 +52,7 @@ func StartJsTask(path string) (instance *JsTaskInstance, err error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = runner.Load(path)
+	_, err = runner.RunFile(path)
 	if err != nil {
 		return nil, err
 	}
