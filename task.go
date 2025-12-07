@@ -23,6 +23,7 @@ type TaskConfig struct {
 	Depends          []string `json:"depends"`
 	CanceledExitCode int
 	AllowParallel    bool
+	DisableLog       bool `json:"disableLog"`
 
 	Sequential bool
 	Steps      []*TaskConfig `json:"steps"`

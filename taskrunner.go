@@ -57,6 +57,19 @@ type TaskState struct {
 	Message    string `json:"message,omitempty"`
 }
 
+func (ts *TaskState) setResult(result *TaskResult) {
+	ts.FinishedAt = time.Now().UnixMilli()
+	ts.Message = result.Message
+
+	if result.Canceled {
+		ts.Status = "canceled"
+	} else if !result.Success {
+		ts.Status = "failed"
+	} else {
+		ts.Status = "success"
+	}
+}
+
 type runState struct {
 	task   *TaskState
 	config *TaskConfig
@@ -111,6 +124,23 @@ func (r *Runner) Start(config *TaskConfig, params map[string]any) (*LogEntry, er
 		r.finishTask(state)
 	}()
 	return log, nil
+}
+
+func (r *Runner) Invoke(ctx context.Context, config *TaskConfig, params map[string]any) (*TaskResult, error) {
+	result := config.Run(ctx, params, nil)
+
+	if !config.DisableLog {
+		log := &LogEntry{
+			TaskID: config.TaskID,
+			RunID:  time.Now().UnixMilli(),
+			Task:   NewTaskLog(config),
+			Params: params,
+		}
+		log.Task.setResult(result)
+		// TODO: lock
+		r.appendLog(log)
+	}
+	return result, nil
 }
 
 func (r *Runner) startInternal(ctx context.Context, config *TaskConfig, logEnt *LogEntry, log *TaskState) *runState {
@@ -286,32 +316,27 @@ func (state *runState) run(ctx context.Context, r *Runner) {
 			return
 		}
 
-		state.task.LogFile = fmt.Sprintf("%s/%d_%s.log", state.log.TaskID, state.log.RunID, state.task.Name)
-		logPath := filepath.Join(r.logDir, state.task.LogFile)
-		_ = os.MkdirAll(filepath.Dir(logPath), os.ModePerm)
-		log, _ := os.Create(logPath)
-		if log != nil {
-			defer log.Close()
+		var logWriter io.Writer
+		if !state.config.DisableLog {
+			state.task.LogFile = fmt.Sprintf("%s/%d_%s.log", state.log.TaskID, state.log.RunID, state.task.Name)
+			logPath := filepath.Join(r.logDir, state.task.LogFile)
+			_ = os.MkdirAll(filepath.Dir(logPath), os.ModePerm)
+			log, _ := os.Create(logPath)
+			if log != nil {
+				defer log.Close()
+			}
+			logWriter = log
 		}
 
-		result := state.config.Run(ctx, state.config.Variables, log)
-
-		state.task.FinishedAt = time.Now().UnixMilli()
-		state.task.Message = result.Message
-
-		if result.Canceled {
-			state.task.Status = "canceled"
-		} else if !result.Success {
+		result := state.config.Run(ctx, state.config.Variables, logWriter)
+		if !result.Success {
 			select {
 			case <-ctx.Done():
-				state.task.Status = "canceled"
-				return
+				result.Canceled = true
 			default:
 			}
-			state.task.Status = "failed"
-		} else {
-			state.task.Status = "success"
 		}
+		state.task.setResult(result)
 	}, tid)
 	if queueState == nil {
 		state.task.Status = "failed"

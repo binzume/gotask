@@ -42,11 +42,7 @@ func handlePostTask(ctx context.Context, w http.ResponseWriter, task *TaskConfig
 	}{}
 	res.TaskID = task.TaskID
 	action := vars.Get("action")
-	if action == "stop" {
-		id, _ := strconv.ParseInt(vars.Get("runId"), 10, 64)
-		res.Ok = runner.Stop(task.TaskID, id)
-		res.RunID = id
-	} else if action == "invoke" {
+	getParams := func() map[string]any {
 		params := map[string]any{}
 		for k, v := range task.Variables {
 			params[k] = v
@@ -58,10 +54,14 @@ func handlePostTask(ctx context.Context, w http.ResponseWriter, task *TaskConfig
 				params[k[7:]] = v[0]
 			}
 		}
-		fmt.Println(params)
-		// TODO: lock
-		// runner.appendLog(&LogEntry{TaskID: task.TaskID})
-		r := task.Run(ctx, params, nil)
+		return params
+	}
+	if action == "stop" {
+		id, _ := strconv.ParseInt(vars.Get("runId"), 10, 64)
+		res.Ok = runner.Stop(task.TaskID, id)
+		res.RunID = id
+	} else if action == "invoke" {
+		r, _ := runner.Invoke(ctx, task, getParams())
 		if r.Success && r.Result != nil {
 			if body, ok := r.Result["body"].(string); ok {
 				if headers, ok := r.Result["headers"].(map[string]any); ok {
@@ -83,15 +83,7 @@ func handlePostTask(ctx context.Context, w http.ResponseWriter, task *TaskConfig
 		res.Message = r.Message
 		res.Ok = r.Success
 	} else {
-		params := map[string]any{}
-		for k, v := range vars {
-			if strings.HasPrefix(k, "VARS.") {
-				params[k[5:]] = v[0]
-			} else if strings.HasPrefix(k, "PARAMS.") {
-				params[k[7:]] = v[0]
-			}
-		}
-		ent, err := runner.Start(task, params)
+		ent, err := runner.Start(task, getParams())
 		if err == nil {
 			res.RunID = ent.RunID
 			res.Ok = true
