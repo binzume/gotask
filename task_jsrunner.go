@@ -6,7 +6,10 @@ import (
 	"io"
 	"path/filepath"
 
-	"github.com/binzume/gotask/goja_utils"
+	"github.com/binzume/goja_utils"
+	_ "github.com/binzume/goja_utils/child_process"
+	"github.com/binzume/goja_utils/fetch"
+	_ "github.com/binzume/goja_utils/fs"
 	"github.com/dop251/goja"
 )
 
@@ -46,7 +49,7 @@ func StartJsTask(path string) (instance *JsTaskInstance, err error) {
 
 	var entryPoint goja.Value
 	runner.Run(func(vm *goja.Runtime) {
-		goja_utils.EnableFetch(vm)
+		fetch.Enable(vm)
 		entryPoint, err = vm.RunString(InitScript)
 	})
 	if err != nil {
