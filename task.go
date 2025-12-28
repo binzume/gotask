@@ -25,6 +25,9 @@ type TaskConfig struct {
 	AllowParallel    bool
 	DisableLog       bool `json:"disableLog"`
 
+	RequiredRole string `json:"requiredRole"`
+	ExposeAPI    bool   `json:"exposeApi"`
+
 	Sequential bool
 	Steps      []*TaskConfig `json:"steps"`
 
