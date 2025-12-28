@@ -150,6 +150,9 @@ func (m *Manager) Load(taskId string) (*TaskConfig, error) {
 			task.Command = "./" + taskId + ".js"
 		}
 	}
+	if task.Runtime == "" && strings.HasSuffix(task.Command, ".js") {
+		task.Runtime = "js"
+	}
 
 	if err != nil {
 		return nil, err

@@ -10,17 +10,16 @@ import (
 	_ "github.com/binzume/goja_utils/child_process"
 	"github.com/binzume/goja_utils/fetch"
 	_ "github.com/binzume/goja_utils/fs"
+	"github.com/binzume/goja_utils/process"
 	"github.com/dop251/goja"
 )
 
 const InitScript = `
 const exports = {};
 const module = { exports: exports };
-const process = { env: {} };
 // returns entry point function.
 (async function (cb, data) {
     if (exports.handler) {
-        process.env = data.env;
         try {
             let r = await exports.handler(data.event, data.context);
             if (typeof r === 'string') {
@@ -41,10 +40,10 @@ type JsTaskInstance struct {
 	runner  *goja_utils.JsRunner
 	f       goja.Callable
 	context map[string]any
-	Env     map[string]any
+	Env     map[string]string
 }
 
-func StartJsTask(path string) (instance *JsTaskInstance, err error) {
+func StartJsTask(path string, log io.Writer) (instance *JsTaskInstance, err error) {
 	runner := goja_utils.NewJsRunnner()
 
 	var entryPoint goja.Value
@@ -52,6 +51,12 @@ func StartJsTask(path string) (instance *JsTaskInstance, err error) {
 		fetch.Enable(vm)
 		entryPoint, err = vm.RunString(InitScript)
 	})
+	config := &process.ProcessConfig{Stdout: log, Env: map[string]string{}}
+	runner.Registry().RegisterNativeModule("process", process.RequireWithConfig(config))
+	runner.Run(func(vm *goja.Runtime) {
+		process.Enable(vm)
+	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -60,18 +65,18 @@ func StartJsTask(path string) (instance *JsTaskInstance, err error) {
 		return nil, err
 	}
 	if f, ok := goja.AssertFunction(entryPoint); ok {
-		runner.Start()
-		return &JsTaskInstance{runner: runner, f: f, Env: map[string]any{},
+		instance := &JsTaskInstance{runner: runner, f: f, Env: config.Env,
 			context: map[string]any{
 				"name": path,
-			}}, nil
+			}}
+		runner.Start()
+		return instance, nil
 	}
 	return nil, fmt.Errorf("no entry point")
 }
 
 func (l *JsTaskInstance) Execute(params any) (result map[string]any, success bool) {
 	data := map[string]any{
-		"env":     l.Env,
 		"event":   params,
 		"context": l.context,
 	}
@@ -99,7 +104,7 @@ func (l *JsTaskInstance) Close() error {
 
 func RunJs(ctx context.Context, config *TaskConfig, params map[string]any, log io.Writer) *TaskResult {
 	r := &TaskResult{}
-	s, err := StartJsTask(filepath.Join(config.Dir, config.Command))
+	s, err := StartJsTask(filepath.Join(config.Dir, config.Command), log)
 	if err != nil {
 		r.Message = "Failed to load:" + config.Command
 	} else {

@@ -3,7 +3,7 @@ module github.com/binzume/gotask
 go 1.23.3
 
 require (
-	github.com/binzume/goja_utils v0.0.0-20251207151131-039fb4c9d401
+	github.com/binzume/goja_utils v0.0.0-20251209232339-a821cc404b9a
 	github.com/dop251/goja v0.0.0-20251121114222-56b1242a5f86
 	github.com/robfig/cron/v3 v3.0.1
 	gopkg.in/yaml.v3 v3.0.1

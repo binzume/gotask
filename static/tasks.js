@@ -154,7 +154,14 @@ class TaskView {
 			return;
 		}
 		logEl.style.display = 'block';
-		let res = await fetch(apiUrl + 'tasklogs/' + logfile);
+		let logUrl = apiUrl + 'tasklogs/' + logfile;
+		let head = await fetch(logUrl, { method: 'HEAD' });
+		let logSize = +head.headers.get('content-length');
+		if (logSize > 1024 * 1024) {
+			logEl.innerText = 'Too large log: ' + logSize + 'B  ' + logUrl;
+			return;
+		}
+		let res = await fetch(logUrl);
 		if (!res.ok) {
 			logEl.innerText = 'Log not found';
 			return;
@@ -164,7 +171,7 @@ class TaskView {
 	}
 
 	selectRun(run) {
-		if  (run?.task?.steps == null && run?.task?.logFile) {
+		if (run?.task?.steps == null && run?.task?.logFile) {
 			this.updateTaskLog(run.task.logFile);
 		} else {
 			this.updateTaskLog(null);
